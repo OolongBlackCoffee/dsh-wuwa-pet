@@ -1,4 +1,4 @@
-# Install / remove the dsh-wuwa-pet logon autostart entry.
+﻿# Install / remove the dsh-wuwa-pet logon autostart entry.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\autostart.ps1 install
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\autostart.ps1 remove

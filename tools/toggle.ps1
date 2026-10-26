@@ -1,4 +1,4 @@
-# Enable / disable the dsh-wuwa-pet bundle in the DSH desktop profile.
+﻿# Enable / disable the dsh-wuwa-pet bundle in the DSH desktop profile.
 # Keep this file ASCII-only: Windows PowerShell 5.1 reads BOM-less files as ANSI,
 # so non-ASCII text here would show up as garbage.
 param(

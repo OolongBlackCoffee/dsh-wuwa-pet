@@ -1,4 +1,4 @@
-# dsh-wuwa-pet autostart launcher (run at logon, window hidden).
+﻿# dsh-wuwa-pet autostart launcher (run at logon, window hidden).
 #
 # Order matters:
 #   1. make sure the bundle is still enabled in the DSH profile

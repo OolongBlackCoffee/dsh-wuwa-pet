@@ -1,4 +1,4 @@
-<#
+﻿<#
   一键部署 / 还原 WuwaTappo 的 CDP 调试端口（读账气泡注入的前置条件）
   ------------------------------------------------------------------
   WuwaTappo 是 Tauri 应用，WebView2 的 additionalBrowserArgs 被编译进 exe，
