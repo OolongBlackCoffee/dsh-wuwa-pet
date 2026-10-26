@@ -1,0 +1,46 @@
+{
+  "name": "dsh-wuwa-pet",
+  "version": "1.3.0",
+  "description": "把小鲸鱼余额接到 WuwaTappo 桌宠头顶：余额 / 今日已用 / 峰谷倒计时 / 每轮消耗弹泡与提示音，提问与授权挂起时常驻提醒；自带计价账本，不依赖其他插件。/ Show DeepSeek balance on your WuwaTappo desktop pet: balance, today's spend, peak/off-peak, per-turn cost bubbles, persistent reminder while a question or approval is pending — with a built-in local cost ledger.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "wuwa",
+    "wuwatappo",
+    "desktop-pet",
+    "balance",
+    "widget",
+    "cost",
+    "ledger"
+  ],
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "assets",
+    "tools",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "screenshots.json"
+  ],
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "author": "OolongBlackCoffee",
+  "license": "MIT",
+  "homepage": "https://github.com/OolongBlackCoffee/dsh-wuwa-pet#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OolongBlackCoffee/dsh-wuwa-pet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OolongBlackCoffee/dsh-wuwa-pet/issues"
+  }
+}

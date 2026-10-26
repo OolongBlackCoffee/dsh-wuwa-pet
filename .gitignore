@@ -1,0 +1,14 @@
+# 依赖
+node_modules/
+
+# 开发过程产物（不进仓库）
+tools/_*.png
+tools/_*.log
+tools/deploy-cdp.log
+tools/shot.py
+runtime-diag.json
+logs/
+*.orig
+
+# 本地账本/缓存
+.wuwa-pet-*

@@ -1,0 +1,33 @@
+# ============================================================================
+# dsh-wuwa-pet —— DSH bundle patch（挂载声明）
+# ============================================================================
+# DSH 启动时按 bundle 层栈叠加各插件 patch，本文件把这个插件插入 profile 的配置树。
+# 想改参数（CDP 端口、推送间隔、音量…）直接改下面 config，重启 DSH 生效。
+# ============================================================================
+
+- insert:
+    - id: dsh-wuwa-pet
+      name: dsh-wuwa-pet
+      config:
+        # WuwaTappo 的 WebView2 调试端口（由 WuwaTappo.exe 的等长字节补丁打开）
+        cdpPort: 9222
+        # 已连上桌宠时的状态推送间隔（毫秒）
+        tickMs: 2500
+        # 桌宠没开时的探测间隔（毫秒）
+        idleTickMs: 8000
+        # 余额接口缓存时长（毫秒）
+        balanceTtlMs: 60000
+        # 每轮结束时弹泡 + 提示音
+        notifyOnTurnEnd: true
+        # 提问（ask_user_question）/ 授权（approval）挂起时弹常驻琥珀泡
+        notifyOnWait: true
+        # 挂起泡最长存活（毫秒）：兜底，防止用户直接关窗后气泡粘住
+        waitTtlMs: 180000
+        # 认作「提问」的工具名
+        questionTool: ask_user_question
+        soundOn: true
+        volume: 0.55
+        # 弹泡停留时长（毫秒）：只作用于「每轮消耗」泡，挂起泡不受它影响
+        toastMs: 5000
+        # 子代理（spawn/fork）的轮次不提示
+        muteSubagent: true
