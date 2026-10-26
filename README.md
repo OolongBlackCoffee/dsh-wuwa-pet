@@ -39,15 +39,36 @@
 
 ## 安装
 
-插件目前**通过本地目录挂载**安装（尚未发布到 npm）。
+三种方式，按省事程度排序。**装完都要重启一次 DSH**，之后到 **插件 → 已安装** 里确认开关是打开的。
 
-### 1. 拿到代码
+### A. 预构建包（推荐，免构建授权）
+
+1. 到 [Releases](https://github.com/OolongBlackCoffee/dsh-wuwa-pet/releases/latest) 下载 `dsh-wuwa-pet-1.3.0.tgz`
+2. 一条命令装上：
+
+```powershell
+dsh plugin add "C:\Users\你的用户名\Downloads\dsh-wuwa-pet-1.3.0.tgz"
+```
+
+也可以在 **插件 → 添加插件** 里直接选那个 `.tgz` 文件。
+
+### B. 直接装 GitHub 仓库
+
+```powershell
+dsh plugin add https://github.com/OolongBlackCoffee/dsh-wuwa-pet
+```
+
+如果弹出「需要批准构建（allowBuilds）」，同意即可 —— 本插件**没有任何编译步骤**，这个批准只是让 pnpm 把依赖装完。
+
+### C. 源码 + 目录链接（要改代码时用这种）
+
+**1. 拿到代码**
 
 ```powershell
 git clone https://github.com/OolongBlackCoffee/dsh-wuwa-pet.git D:\dsh-wuwa-pet
 ```
 
-### 2. 挂进 DSH 的 profile
+**2. 挂进 DSH 的 profile**
 
 ```powershell
 cd $env:USERPROFILE\.dsh\profiles\desktop
@@ -58,7 +79,7 @@ node "$env:USERPROFILE\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm\b
 
 > 没有全局 pnpm 时，用上面这种「直接跑 pnpm 的 mjs」写法最稳。装在别处就把路径换成你的 `pnpm`。
 
-### 3. 在 profile 的 `package.json` 里登记
+**3. 在 profile 的 `package.json` 里登记**
 
 编辑 `%USERPROFILE%\.dsh\profiles\desktop\package.json`，在 `dsh.profile.bundles` 数组末尾加上包名：
 
@@ -71,9 +92,9 @@ node "$env:USERPROFILE\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm\b
 
 同时确认 `dependencies` 里有 `"dsh-wuwa-pet": "link:D:/dsh-wuwa-pet"`（上一步的 `pnpm add` 会自动写入）。
 
-### 4. 重启 DSH
+**4. 重启 DSH**
 
-重启后，插件会出现在 **插件 → 已安装** 列表里，可以像其他插件一样开关。
+> 用 A/B 装的话，`dsh plugin add` 会自动写好依赖和 bundles，不需要手动改 `package.json`。
 
 > 第一次加载时插件会自动跑一次 CDP 补丁（见下一节）。如果 WuwaTappo 正在运行，脚本会先关掉它再改、改完再拉起来。
 
@@ -227,14 +248,23 @@ A DeepSeek Harness plugin that shows your **DeepSeek balance and per-turn cost**
 
 **Requirements**: Windows, DeepSeek Harness, Node.js ≥ 20.11, and a WuwaTappo desktop pet (not bundled).
 
-**Install** (not on npm yet):
+**Install** (not on npm yet — two supported ways):
 
 ```powershell
+# A. prebuilt tarball from Releases (no build step, no build approval)
+dsh plugin add "%USERPROFILE%\Downloads\dsh-wuwa-pet-1.3.0.tgz"
+
+# B. straight from GitHub
+dsh plugin add https://github.com/OolongBlackCoffee/dsh-wuwa-pet
+
+# C. from source, for hacking on it
 git clone https://github.com/OolongBlackCoffee/dsh-wuwa-pet.git D:\dsh-wuwa-pet
 cd $env:USERPROFILE\.dsh\profiles\desktop
 node "$env:USERPROFILE\.dsh\dsh-runtimes\dsh-primary-runtime\dependencies\pnpm\bin\pnpm.mjs" add "link:D:\dsh-wuwa-pet"
-# then add "dsh-wuwa-pet" to dsh.profile.bundles in package.json and restart DSH
+# then add "dsh-wuwa-pet" to dsh.profile.bundles in package.json
 ```
+
+Restart DSH once afterwards; the plugin shows up under **Plugins → Installed**.
 
 The bubble layer is injected over CDP, so WuwaTappo must run with `--remote-debugging-port=9222`. `tools/deploy-cdp.ps1` patches the launcher arguments byte-for-byte (idempotent, keeps a `.orig` backup) and runs automatically on plugin load (`autoDeploy: true`). Set `"autoDeploy": false` to opt out.
 
