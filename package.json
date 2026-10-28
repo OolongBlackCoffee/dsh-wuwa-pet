@@ -1,6 +1,6 @@
 {
   "name": "dsh-wuwa-pet",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "把小鲸鱼余额接到 WuwaTappo 桌宠头顶：余额 / 今日已用 / 峰谷倒计时 / 每轮消耗弹泡与提示音，提问与授权挂起时常驻提醒；自带计价账本，不依赖其他插件。/ Show DeepSeek balance on your WuwaTappo desktop pet: balance, today's spend, peak/off-peak, per-turn cost bubbles, persistent reminder while a question or approval is pending — with a built-in local cost ledger.",
   "keywords": [
     "dsh",

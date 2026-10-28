@@ -271,3 +271,41 @@ The bubble layer is injected over CDP, so WuwaTappo must run with `--remote-debu
 **Privacy**: everything is local; no telemetry, no third-party requests. Costs are estimates — the official bill wins.
 
 **License**: MIT. Not affiliated with DeepSeek or WuwaTappo.
+
+## 十四、计费偏高修复（1.4.0，2026-10-28）
+
+### 现象
+
+桌宠的「今日已用 / 近 7 天」比自己逐轮加起来偏高，10-26 当天甚至到了 **¥22.98**。
+
+### 根因（两处，都在自算账本的对账逻辑里）
+
+1. **今天被「钱包差额」覆盖**：`reconcileHistory()` 每 60 秒把 `dsh-whale-widget` 的 `history[当天]` 抬进本插件账本（只升不降）。
+   而 whale 的当日数字来自**余额观测**：`cur.delta += cur.lastBalance - remaining`（`dsh-whale-widget/lib/index.js:2646`、`apiTodayUsage()` L2663），
+   它统计的是「钱包少了多少钱」，包含**子代理开销、其它窗口/其它工具的花费、以及充值时段的读数漂移**，与 token 明细不是一回事。
+2. **子代理不计账**：`onTurnEnd()` 里 `if (cfg.muteSubagent && subagentSessions.has(sid)) return` 直接把子会话整轮跳过，
+   于是自算明细**少了子代理那部分**，两边的差就被「钱包差额」补了上去 —— 两个错误互相掩盖，最终以偏高的那个数显示。
+
+### 改法
+
+- `lib/selfledger.js`
+  - `seedFromWhale()`：**今天不再喂入** whale 的 history（历史天数照旧）。
+  - `reconcileHistory()`：**今天永不改动**；历史天只有在**本插件没有任何事件明细**时才用 whale 的值兜底。
+  - 新增 `repairDays()`：把「有明细的每一天」按明细重算，**只降不升**，一次性抹掉历史虚高；加载时自动跑。
+- `lib/index.js`
+  - 子代理轮次**照常记账**（`settleTurn(sid, attempt, quiet)`），`muteSubagent` 只负责不弹泡、不打扰。
+  - `diag.costAudit` 新增对照：`{ todayEvents, todayWalletDelta, diff }`，能直接看出「钱包差额」比「逐轮合计」多多少。
+
+### 实测
+
+| 项目 | 修复前 | 修复后 |
+|---|---|---|
+| 今日（10-28） | ¥9.3998 | **¥8.6806**（= 30 轮事件合计） |
+| 10-26 | ¥23.1786 | **¥6.0188** |
+| 10-25 | ¥12.4205 | **¥10.8378** |
+| 本周 | ¥50.3563 | **¥31.4236** |
+| 抹掉合计 | — | **¥18.9425** |
+
+自检：`node tools/selftest-selfcost.mjs` **39 项全过**（新增「今天不被钱包差额抬高」「有明细的历史天不被覆盖」「repairDays 只降不升且幂等」三条）；`node test-smoke.mjs` 全过。
+
+> 注：钱包差额仍是**真实花费**的口径（含子代理）。现在两套数都有：显示用逐轮明细，`diag.costAudit` 里保留钱包差额做对照。差异主要来自「其它窗口/其它工具」的消耗。

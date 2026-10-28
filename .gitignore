@@ -12,3 +12,5 @@ logs/
 
 # 本地账本/缓存
 .wuwa-pet-*
+*.bak
+*.bak-*

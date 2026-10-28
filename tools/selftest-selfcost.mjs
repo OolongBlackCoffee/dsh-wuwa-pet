@@ -19,7 +19,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wuwa-selfcost-'))
 process.env.DSH_HOME = tmp
 
 const { costOf, priceFor } = await import('../lib/pricing.js')
-const { appendTurn, summarize, seedFromWhale, resetSelf, reconcileHistory, files, bjDayKey } = await import('../lib/selfledger.js')
+const { appendTurn, summarize, seedFromWhale, resetSelf, reconcileHistory, repairDays, files, bjDayKey } = await import('../lib/selfledger.js')
 
 let pass = 0
 let fail = 0
@@ -100,14 +100,14 @@ ok('模型拆分存在', s.models.length >= 1, JSON.stringify(s.models[0]))
 console.log('\n[4] 首次 seed（从 whale 账本）')
 resetSelf()
 const seeded = seedFromWhale({
-  history: { '2026-10-25': 1.5, '2026-10-26': 2.0 },
+  history: { [bjDayKey(now - 86400000)]: 1.5, [bjDayKey(now)]: 2.0 },
   events: [
-    { ts: now - 3600_000, day: '2026-10-26', model: 'deepseek-v4.1-flash', cost: 0.8, tokens: 5000 },
-    { ts: now, day: '2026-10-26', model: 'deepseek-v4.1-flash', cost: 1.2, tokens: 9000 },
+    { ts: now - 3600_000, day: bjDayKey(now), model: 'deepseek-v4.1-flash', cost: 0.8, tokens: 5000 },
+    { ts: now, day: bjDayKey(now), model: 'deepseek-v4.1-flash', cost: 1.2, tokens: 9000 },
   ],
 })
 ok('seed 成功', seeded === true)
-const seeded2 = seedFromWhale({ history: { '2026-10-26': 99 }, events: [] })
+const seeded2 = seedFromWhale({ history: { [bjDayKey(now)]: 99 }, events: [] })
 ok('seed 幂等（第二次返回 false）', seeded2 === false)
 s = summarize(now)
 ok('seed 后历史保留（>= 2.0）', s.today >= 2.0 && s.today < 3.0, '今日=' + s.today)
@@ -121,16 +121,32 @@ appendTurn({ key: 's9:1', ts: now, model: '', cost: 0.1, tokens: 10, src: 'self'
 const recovered = summarize(now)
 ok('坏文件后能重建', recovered.ok === true && recovered.today >= 0.1, '今日=' + recovered.today)
 
-// —— 5) 与 whale 历史对账：只升不降 ——
-console.log('\n[5] 与 whale 历史对账（只升不降）')
+// —— 5) 与 whale 对账：今天以事件为准，历史无明细才补 ——
+console.log('\n[5] 与 whale 对账（今天不被钱包差额抬高）')
 fs.rmSync(files.SELF_FILE, { force: true })
 const todayKey = bjDayKey(now)
 appendTurn({ key: 's10:1', ts: now, model: 'deepseek-flash', cost: 0.5, tokens: 1000, src: 'self' })
-const raised = reconcileHistory({ history: { [todayKey]: 3.2, '2026-10-20': 9.9 } })
-eq('抬高天数', raised, 2)
-eq('今日被抬到 whale 的值', summarize(now).today, 3.2)
-eq('历史天数也补上了', summarize(now).history7.find((d) => d.day === '2026-10-20').cost, 9.9)
+const OLD_DAY = bjDayKey(now - 9 * 86400000)
+const raised = reconcileHistory({ history: { [todayKey]: 3.2, [OLD_DAY]: 9.9 } })
+eq('只补没有明细的历史天', raised, 1)
+eq('今日以事件为准（不被钱包差额抬高）', summarize(now).today, 0.5)
+eq('无明细的历史天被补上', JSON.parse(fs.readFileSync(files.SELF_FILE, 'utf8')).days[OLD_DAY].cost, 9.9)
 eq('再对账不重复抬高', reconcileHistory({ history: { [todayKey]: 3.2 } }), 0)
+
+// 有明细的历史天不被覆盖
+const yKey = bjDayKey(now - 86400000)
+appendTurn({ key: 's11:1', ts: now - 86400000, model: 'deepseek-flash', cost: 1.0, tokens: 2000, src: 'self' })
+eq('有明细的历史天不被 whale 覆盖', reconcileHistory({ history: { [yKey]: 5.0 } }), 0)
+eq('该日保持事件合计', JSON.parse(fs.readFileSync(files.SELF_FILE, 'utf8')).days[yKey].cost, 1.0)
+
+// repairDays：旧版虚高（钱包差额）被抹掉，只降不升
+const manual = JSON.parse(fs.readFileSync(files.SELF_FILE, 'utf8'))
+manual.days[todayKey].cost = 9.9
+fs.writeFileSync(files.SELF_FILE, JSON.stringify(manual), 'utf8')
+const cutAmt = repairDays()
+ok('repairDays 抹掉今日虚高', cutAmt > 9.0, 'cut=' + cutAmt)
+eq('修复后今日 = 事件合计', summarize(now).today, 0.5)
+eq('repairDays 幂等', repairDays(), 0)
 
 fs.rmSync(tmp, { recursive: true, force: true })
 
