@@ -217,6 +217,8 @@ node tools\test-smoke.mjs
 
 ## 变更记录
 
+- **1.4.1** —— 新增「碎碎念」：每隔一段时间自己冒一句话，停几秒再自己消失（可关、可调周期、可换台词池）
+- **1.4.0** —— 计费口径修复：今日金额不再被 whale 钱包差额覆盖，子代理轮次也计入账本
 - **1.3.0** —— 插件加载时自动补 CDP 补丁（`autoDeploy`）；脚本去个人化（不再写死安装路径）；补截图与图标
 - **1.2.0** —— 自带计价账本，不再依赖 `dsh-whale-widget`
 - **1.1.0** —— 提问/授权挂起时常驻提醒
@@ -309,3 +311,41 @@ The bubble layer is injected over CDP, so WuwaTappo must run with `--remote-debu
 自检：`node tools/selftest-selfcost.mjs` **39 项全过**（新增「今天不被钱包差额抬高」「有明细的历史天不被覆盖」「repairDays 只降不升且幂等」三条）；`node test-smoke.mjs` 全过。
 
 > 注：钱包差额仍是**真实花费**的口径（含子代理）。现在两套数都有：显示用逐轮明细，`diag.costAudit` 里保留钱包差额做对照。差异主要来自「其它窗口/其它工具」的消耗。
+
+## 十五、碎碎念（1.4.1，2026-10-28）
+
+桌宠会**时不时自己冒一句话**，停几秒再自己消失——不是弹一个就永久挂在那儿的静态气泡。
+
+### 行为
+
+- 默认每 **5 分钟**左右说一句（可抖动 ±25%，避免整点打卡），气泡**停留 9 秒**后淡出并清空文本。
+- 台词按**时段**挑（早上 / 白天 / 傍晚 / 深夜各一套），说完一句会**避免立刻重复**同一句。
+- **不抢话**：如果此刻正有「等你回答 / 待授权」的琥珀色挂起泡、面板展开、或者光标正停在输入框/可编辑区，这一句会**跳过**，35 秒后再试。
+- 气泡样式与消耗泡一致（白色圆角 + 下方小尾巴 + 鲸鱼前缀），`pointer-events: none`，不挡点击；点一下气泡会立刻收起。
+
+### 配置（`cordis.patch.yml` 里 `config`）
+
+| 键 | 默认 | 说明 |
+|---|---|---|
+| `whisperEnabled` | `true` | 关掉就完全不说话 |
+| `whisperEveryMs` | `300000` | 间隔（毫秒），最小 20000 |
+| `whisperHoldMs` | `9000` | 气泡停留时长 |
+| `whisperJitter` | `0.25` | 间隔抖动比例（0–0.9） |
+| `whisperLines` | `[]` | 自定义台词池；留空用内置池 |
+
+自定义台词池两种写法都认：
+
+```yaml
+whisperLines: ["今天也要好好的", "记得喝水～"]
+# 或者按时段：
+whisperLines:
+  - { text: "早上好呀", when: morning }
+  - { text: "夜深了，早点睡", when: night }
+```
+
+### 实现
+
+- `lib/whisper.js`：台词池 + 时段筛选 + 避免重复 + 间隔抖动（纯逻辑，无 IO）。**不调用任何模型**，所以碎碎念本身零成本、离线可用。
+- `lib/index.js`：15 秒 tick 的定时器（到点才说），页面说「此刻不方便」时 35 秒后重试；`dispose` 里随插件一起停。
+- `lib/widget.js`（1.2.0）：独立的 `.dshw-whisper` 气泡节点，`show`/`out` 两态 + 360ms 淡出，淡出后才清空文本。
+- 验收：`node tools/test-whisper-offline.mjs` —— 用 Edge headless 起一个假页面注入 widget，断言「出现 → 停留 → 自动消失」（实测 T+0.5s `show`/opacity 1、T+4.2s 已清空/opacity 0），并顺手截图 `assets/screenshots/whisper.png`。
