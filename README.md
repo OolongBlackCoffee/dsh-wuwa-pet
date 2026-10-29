@@ -345,7 +345,25 @@ whisperLines:
 
 ### 实现
 
-- `lib/whisper.js`：台词池 + 时段筛选 + 避免重复 + 间隔抖动（纯逻辑，无 IO）。**不调用任何模型**，所以碎碎念本身零成本、离线可用。
+- `lib/whisper.js`：台词池 + 时段筛选 + 避免重复 + 间隔抖动（纯逻辑，无 IO）。默认不调用任何模型，所以碎碎念本身零成本、离线可用。
 - `lib/index.js`：15 秒 tick 的定时器（到点才说），页面说「此刻不方便」时 35 秒后重试；`dispose` 里随插件一起停。
 - `lib/widget.js`（1.2.0）：独立的 `.dshw-whisper` 气泡节点，`show`/`out` 两态 + 360ms 淡出，淡出后才清空文本。
 - 验收：`node tools/test-whisper-offline.mjs` —— 用 Edge headless 起一个假页面注入 widget，断言「出现 → 停留 → 自动消失」（实测 T+0.5s `show`/opacity 1、T+4.2s 已清空/opacity 0），并顺手截图 `assets/screenshots/whisper.png`。
+
+## 十六、碎碎念接本地模型（1.5.0，2026-10-29）
+
+想让每句话都不一样？可以把碎碎念切到**本机 llama.cpp**（OpenAI 兼容接口）现写一句，实测 4B 模型 **250–350 ms** 出一句，不花云额度。
+
+```yaml
+- id: dsh-wuwa-pet
+  config:
+    whisperSource: llm
+    whisperLlmUrl: http://127.0.0.1:8080/v1/chat/completions
+```
+
+- 新增配置：`whisperSource`（`pool`/`llm`，默认 `pool`）、`whisperLlmUrl`、`whisperLlmModel`（留空自动取第一个）、`whisperLlmTimeoutMs`（默认 30000）、`whisperLlmPrompt`（自定义人设）。
+- **永不因为模型掉线而沉默**：模型没开 / 超时 / 返回不合格都自动回退内置台词池。
+- 首次冒泡**先用池子的句子**，同时后台预热模型（首句推理要 20 秒上下），从第二次起才走模型。
+- 最近 5 句会作为「别重复」提示一起发过去，实测三连不撞。
+
+完整说明（含 llama-server 启动命令、配置全表、自检与排错）见 [`docs/whisper-llm.md`](docs/whisper-llm.md)。自检：`node tools/test-whisper-llm.mjs`。
