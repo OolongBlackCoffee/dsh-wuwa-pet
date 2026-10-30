@@ -218,6 +218,8 @@ node tools\test-smoke.mjs
 
 ## 变更记录
 
+- **1.6.0** —— 新增「每周用量周报」：每周一早上自动汇总上一自然周，写 Markdown 并在桌宠上说一句
+- **1.5.0** —— 碎碎念可接本机本地模型（llama.cpp）现写一句，掉线自动退回台词池
 - **1.4.1** —— 新增「碎碎念」：每隔一段时间自己冒一句话，停几秒再自己消失（可关、可调周期、可换台词池）
 - **1.4.0** —— 计费口径修复：今日金额不再被 whale 钱包差额覆盖，子代理轮次也计入账本
 - **1.3.0** —— 插件加载时自动补 CDP 补丁（`autoDeploy`）；脚本去个人化（不再写死安装路径）；补截图与图标
@@ -370,3 +372,40 @@ whisperLines:
 - 最近 5 句会作为「别重复」提示一起发过去，实测三连不撞。
 
 完整说明（含 llama-server 启动命令、配置全表、自检与排错）见 [`docs/whisper-llm.md`](docs/whisper-llm.md)。自检：`node tools/test-whisper-llm.mjs`。
+
+## 十七、每周用量周报（1.6.0，2026-10-30）
+
+**解决的问题**：前十五节的账本是「按天记账」，但没有「这一周花了多少、比上周多还是少」的成句结论。周报把它补上：每周一早上自动拿**上一个完整自然周（周一~周日）**算一遍，写成 Markdown，并在桌宠头顶说一句「上周一共花了 ¥x，周报写好啦」。
+
+### 行为
+
+- **周期**：周一（可配 `weeklyWeekday`）当天 `weeklyHour` 点之后的第一次检查生成；用的是**上一个自然周**，不是滚动 7 天。
+- **不会重复**：文件名是 ISO 周号（`2026-W44.md`），本周期已生成就直接跳过——所以电脑周一半夜关着也没关系，明天开机自动补。
+- **落到哪**：默认 `~/.dsh/wuwa-pet-reports/2026-W44.md`，可用 `weeklyDir` 改。
+- **内容**：合计/轮次/tokens、每天的迷你条形图、最烧钱的一天、按模型占比、与前一自然周的环比、以及「怎么省」三条固定建议。
+
+### 配置（`cordis.patch.yml` 里 `config`）
+
+```yaml
+config:
+  weeklyReport: true      # 关掉就完全不生成
+  weeklyWeekday: 1        # 1=周一 … 7=周日
+  weeklyHour: 9           # 当天几点之后算「到点」
+  weeklyDir: ''           # 留空 = ~/.dsh/wuwa-pet-reports
+```
+
+### 手动看一眼 / 补一份
+
+```bash
+node tools/test-weekly.mjs              # 只算不写，顺带断言周界对不对
+node tools/test-weekly.mjs 2026-11-02   # 把「今天」设成某个周一，验证边界
+node tools/gen-weekly.mjs --print       # 打印一份周报，不写文件
+node tools/gen-weekly.mjs               # 立刻写一份（不等周一）
+```
+
+DSH 里也可以直接触发（插件已加载时）：`__DSH_WUWA_PET__.weeklyNow()`。
+
+### 一个坑（写在这里免得后人再踩）
+
+最早 `weeklyStats()` 算的是「滚动 7 天（含今天）」，所以周一边界会是「周二~周一」。周报要的是自然周，于是加了第二参数：`weeklyStats(now, 'lastWeek')` 用**上一个完整自然周**，气泡/调试仍用默认 `rolling7`。
+
